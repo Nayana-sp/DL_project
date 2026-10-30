@@ -1,23 +1,16 @@
-# Exclude raw RAVDESS dataset
-data/raw/
-
-# Exclude generated results
-results/
-
-# Python virtual environment
-.venv/
-venv/
-
-# Python cache
+﻿.venv/
 __pycache__/
 *.pyc
-
-# Secrets
-.env
-
-# Jupyter temporary files
 .ipynb_checkpoints/
-
-# Exclude generated audio and video features
-data/processed/audio/
-data/processed/video/
+data/raw/
+*.zip
+checkpoints/
+*.pt
+*.pth
+data/processed/*
+!data/processed/*.csv
+!data/processed/*.json
+outputs/logs/*.log
+*.tmpoutputs/figures/probe_*.jpg
+outputs/figures/crop_check.png
+outputs/figures/probe_*.jpg

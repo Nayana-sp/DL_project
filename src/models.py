@@ -1,192 +1,54 @@
-
+"""Model definitions. Image CNN now; audio CNN and fusion models are added in later phases."""
 import torch
-from torch import nn
-from torchvision import models
+import torch.nn as nn
 
 
-class AudioCNN(nn.Module):
-    def __init__(self, embedding_dim=128, num_classes=8):
+def conv_block(cin, cout):
+    return nn.Sequential(nn.Conv2d(cin, cout, 3, padding=1, bias=False), nn.BatchNorm2d(cout),
+                         nn.ReLU(inplace=True), nn.MaxPool2d(2))
+
+
+class ImageCNN(nn.Module):
+    """Small CNN for face crops. (B,3,H,W) -> embedding (B,emb_dim) -> logits (B,n_classes)."""
+
+    def __init__(self, n_classes=8, emb_dim=128, dropout=0.3, widths=(32, 64, 128, 256)):
         super().__init__()
+        chans = (3,) + tuple(widths)
+        self.features = nn.Sequential(*[conv_block(a, b) for a, b in zip(chans[:-1], chans[1:])])
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.embed = nn.Sequential(nn.Flatten(), nn.Dropout(dropout),
+                                   nn.Linear(widths[-1], emb_dim), nn.ReLU(inplace=True))
+        self.classifier = nn.Sequential(nn.Dropout(dropout), nn.Linear(emb_dim, n_classes))
 
-        blocks = []
-        in_ch = 1
-
-        for out_ch in (32, 64, 128):
-            blocks += [
-                nn.Conv2d(in_ch, out_ch, 3, padding=1),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True),
-                nn.MaxPool2d(2),
-            ]
-            in_ch = out_ch
-
-        self.features = nn.Sequential(
-            *blocks,
-            nn.AdaptiveAvgPool2d((1, 1)),
-            nn.Flatten(),
-        )
-
-        self.embedding = nn.Sequential(
-            nn.Linear(128, embedding_dim),
-            nn.ReLU(),
-            nn.Dropout(0.25),
-        )
-
-        self.classifier = nn.Linear(embedding_dim, num_classes)
-
-    def encode(self, x):
-        return self.embedding(self.features(x))
+    def forward_embedding(self, x):
+        return self.embed(self.pool(self.features(x)))
 
     def forward(self, x):
-        return self.classifier(self.encode(x))
+        return self.classifier(self.forward_embedding(x))
 
 
-class VisualCNN(nn.Module):
-    def __init__(
-        self,
-        embedding_dim=128,
-        num_classes=8,
-        pretrained=True,
-    ):
+class ClipImageModel(nn.Module):
+    """Clip-level wrapper. (B,n,3,H,W) -> clip logits (B,n_classes), the mean of per-frame logits."""
+
+    def __init__(self, n_classes=8, emb_dim=128, dropout=0.3):
         super().__init__()
+        self.cnn = ImageCNN(n_classes, emb_dim, dropout)
 
-        try:
-            weights = (
-                models.ResNet18_Weights.DEFAULT
-                if pretrained
-                else None
-            )
-            backbone = models.resnet18(weights=weights)
-
-        except Exception as exc:
-            print(
-                f"WARNING: pretrained ResNet weights unavailable "
-                f"({exc}); using random initialization."
-            )
-            backbone = models.resnet18(weights=None)
-
-        self.backbone = nn.Sequential(
-            *list(backbone.children())[:-1]
-        )
-
-        for p in self.backbone.parameters():
-            p.requires_grad = False
-
-        self.projection = nn.Sequential(
-            nn.Linear(512, embedding_dim),
-            nn.ReLU(),
-            nn.Dropout(0.25),
-        )
-
-        self.classifier = nn.Linear(
-            embedding_dim,
-            num_classes,
-        )
-
-    def encode_frames(self, x):
-        # Input shape: B, T, C, H, W
-        b, t, c, h, w = x.shape
-        x = x.reshape(b * t, c, h, w)
-
-        with torch.no_grad():
-            f = self.backbone(x).flatten(1)
-
-        f = f.reshape(b, t, -1).mean(dim=1)
-
-        return self.projection(f)
+    def forward_embedding(self, x):
+        b, n = x.shape[:2]
+        return self.cnn.forward_embedding(x.flatten(0, 1)).view(b, n, -1).mean(1)
 
     def forward(self, x):
-        return self.classifier(self.encode_frames(x))
+        b, n = x.shape[:2]
+        return self.cnn(x.flatten(0, 1)).view(b, n, -1).mean(1)
 
 
-class MultimodalModel(nn.Module):
-    def __init__(
-        self,
-        mode="early",
-        embedding_dim=128,
-        num_classes=8,
-        pretrained=True,
-        modality_dropout=False,
-    ):
-        super().__init__()
+def count_params(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-        self.mode = mode
-        self.modality_dropout = modality_dropout
 
-        self.audio = AudioCNN(embedding_dim, num_classes)
-        self.visual = VisualCNN(
-            embedding_dim,
-            num_classes,
-            pretrained,
-        )
-
-        self.audio_proj = nn.Sequential(
-            nn.Linear(embedding_dim, embedding_dim),
-            nn.ReLU(),
-        )
-
-        self.visual_proj = nn.Sequential(
-            nn.Linear(embedding_dim, embedding_dim),
-            nn.ReLU(),
-        )
-
-        # Early fusion concatenates two embeddings:
-        # embedding_dim + embedding_dim = 2 * embedding_dim.
-        # Both early and gated variants need this input size.
-        fusion_input_dim = (
-            embedding_dim * 2
-            if mode in ("early", "early_dropout")
-            else embedding_dim
-        )
-
-        self.fusion_head = nn.Sequential(
-            nn.Linear(fusion_input_dim, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classes),
-        )
-
-        self.gate = nn.Sequential(
-            nn.Linear(embedding_dim * 2, embedding_dim),
-            nn.Sigmoid(),
-        )
-
-    def forward(self, audio, video):
-        if self.mode == "audio":
-            return self.audio(audio)
-
-        if self.mode == "visual":
-            return self.visual(video)
-
-        if self.mode == "late":
-            return (
-                self.audio(audio) + self.visual(video)
-            ) / 2
-
-        a = self.audio_proj(self.audio.encode(audio))
-        v = self.visual_proj(
-            self.visual.encode_frames(video)
-        )
-
-        if self.training and self.modality_dropout:
-            # Randomly drop audio and/or visual embeddings
-            # during training to improve robustness.
-            r = torch.rand(a.shape[0], device=a.device)
-
-            a = a * (r >= 0.25).float().unsqueeze(1)
-            v = v * (r < 0.75).float().unsqueeze(1)
-
-        if self.mode in ("early", "early_dropout"):
-            return self.fusion_head(
-                torch.cat([a, v], dim=1)
-            )
-
-        if self.mode in ("gated", "gated_dropout"):
-            g = self.gate(torch.cat([a, v], dim=1))
-            self.last_gate = g.detach()
-
-            return self.fusion_head(
-                g * a + (1 - g) * v
-            )
-
-        raise ValueError(f"Unknown model mode: {self.mode}")
+if __name__ == "__main__":
+    m = ClipImageModel()
+    x = torch.randn(4, 5, 3, 112, 112)
+    print("clip logits", tuple(m(x).shape), "| clip embedding", tuple(m.forward_embedding(x).shape),
+          "| trainable params", count_params(m))

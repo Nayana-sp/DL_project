@@ -1,0 +1,15 @@
+{
+  "sample_rate": 16000,
+  "duration": 5.0,
+  "n_frames": 5,
+  "img_size": 112,
+  "expand": 1.45,
+  "shift_up": 0.125,
+  "frame_lo": 0.25,
+  "frame_hi": 0.75,
+  "min_face": 150,
+  "workers": 4,
+  "limit": 20,
+  "force": false,
+  "opencv": "4.14.0"
+}

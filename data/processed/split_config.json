@@ -1,0 +1,5 @@
+{
+  "seed": 42,
+  "val_per_gender": 2,
+  "test_per_gender": 2
+}
