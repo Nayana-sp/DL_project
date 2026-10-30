@@ -1,0 +1,9 @@
+emotion,clips,disagree_rate,both_right,only_image_right,only_audio_right,neither_right
+neutral,16,0.375,10,0,5,1
+calm,32,0.562,12,5,13,2
+happy,32,0.844,5,12,4,11
+sad,32,0.781,0,4,2,26
+angry,32,0.781,7,2,15,8
+fearful,32,0.812,6,4,14,8
+disgust,32,0.531,13,6,5,8
+surprised,32,0.812,6,4,13,9
