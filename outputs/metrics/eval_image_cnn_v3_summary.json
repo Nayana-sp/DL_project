@@ -1,0 +1,20 @@
+{
+  "name": "image_cnn_v3",
+  "model": "image",
+  "best_epoch": 28,
+  "selection_val_macro_f1": 0.46924461577672993,
+  "val": {
+    "accuracy": 0.45416666666666666,
+    "macro_f1": 0.4485231241279628,
+    "n_clips": 240,
+    "inference_seconds_total": 6.54,
+    "inference_ms_per_clip": 27.3
+  },
+  "test": {
+    "accuracy": 0.4,
+    "macro_f1": 0.4065961106514691,
+    "n_clips": 240,
+    "inference_seconds_total": 6.44,
+    "inference_ms_per_clip": 26.8
+  }
+}
