@@ -1,0 +1,7 @@
+comparison,accuracy diff,95% CI low,95% CI high,excludes 0
+Late fusion - Audio only,0.0792,0.0333,0.125,yes
+Early fusion - Audio only,-0.0167,-0.0875,0.0542,no
+Late fusion - Early fusion,0.0958,0.0333,0.1625,yes
+Late fusion - Image only,0.2208,0.1542,0.2875,yes
+Audio only - Image only,0.1417,0.0583,0.225,yes
+Early fusion - Image only,0.125,0.0458,0.2,yes

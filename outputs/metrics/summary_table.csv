@@ -1,0 +1,5 @@
+system,params,epochs run,best epoch,train min,val acc,val macro-F1,test acc,test macro-F1,ms/clip
+Image only,422824,30.0,28.0,38.1467,0.4542,0.4485,0.4,0.4066,26.8
+Audio only,422248,30.0,30.0,36.9717,0.4958,0.482,0.5417,0.5216,29.3
+Early fusion,876936,30.0,25.0,86.305,0.4833,0.4758,0.525,0.5077,67.9
+Late fusion,845072,,,75.1183,0.6042,0.5942,0.6208,0.5974,56.1
