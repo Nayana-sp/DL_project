@@ -23,8 +23,8 @@ from sklearn.metrics import accuracy_score, f1_score
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dataset import EMOTIONS, AudioDataset, ImageDataset, class_weights, load_index
-from models import AudioCNN, ClipImageModel, count_params
+from dataset import EMOTIONS, AudioDataset, FusionDataset, ImageDataset, class_weights, load_index
+from models import AudioCNN, ClipImageModel, EarlyFusionModel, count_params
 
 ROOT = Path(__file__).resolve().parents[1]
 CKPT = ROOT / "checkpoints"
@@ -36,12 +36,19 @@ def seed_everything(seed):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+def to_dev(x, device):
+    """Move a tensor, or a list/tuple of tensors (fusion models), to the device."""
+    if isinstance(x, (list, tuple)):
+        return [t.to(device) for t in x]
+    return x.to(device)
 
 def build(kind, a):
     if kind == "image":
         return ClipImageModel(len(EMOTIONS), a.emb_dim, a.dropout), ImageDataset
     if kind == "audio":
         return AudioCNN(len(EMOTIONS), a.emb_dim, a.dropout), AudioDataset
+    if kind == "early":
+        return EarlyFusionModel(len(EMOTIONS), a.emb_dim, a.dropout), FusionDataset
     sys.exit(f"unknown model: {kind}")
 
 
@@ -51,7 +58,7 @@ def predict_probs(model, loader, device="cpu"):
     model.eval()
     ids, ys, ps = [], [], []
     for x, y, sid in loader:
-        ps.append(torch.softmax(model(x.to(device)), dim=1).cpu().numpy())
+        ps.append(torch.softmax(model(to_dev(x, device)), dim=1).cpu().numpy())
         ys.extend(y.tolist())
         ids.extend(sid)
     return ids, np.array(ys), np.concatenate(ps)
@@ -86,7 +93,7 @@ def recalibrate_bn(model, loader, device="cpu"):
         m.momentum = None  # None = plain average over all batches
     model.train()
     for x, _, _ in loader:
-        model(x.to(device))
+        model(to_dev(x, device))
     for m, mom in zip(bns, old):
         m.momentum = mom
     model.eval()
@@ -96,7 +103,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
     total, n = 0.0, 0
     for x, y, _ in tqdm(loader, desc="  train", leave=False):
-        x, y = x.to(device), y.to(device)
+        x, y = to_dev(x, device), y.to(device)
         optimizer.zero_grad(set_to_none=True)
         loss = criterion(model(x), y)
         loss.backward()
@@ -108,7 +115,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--model", choices=["image", "audio"], default="image")
+    ap.add_argument("--model", choices=["image", "audio", "early"], default="image")
     ap.add_argument("--name", default="image_cnn")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=16)
@@ -178,7 +185,7 @@ def main():
         _, yv, pv = predict_probs(model, val_loader, device)
         if recal_loader is not None:
             recalibrate_bn(model, recal_loader, device)  
-                
+
         val = score(yv, pv)
         scheduler.step()
         dt = time.time() - t0

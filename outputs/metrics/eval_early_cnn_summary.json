@@ -1,0 +1,20 @@
+{
+  "name": "early_cnn",
+  "model": "early",
+  "best_epoch": 25,
+  "selection_val_macro_f1": 0.5127013358289924,
+  "val": {
+    "accuracy": 0.48333333333333334,
+    "macro_f1": 0.47578303313076536,
+    "n_clips": 240,
+    "inference_seconds_total": 17.99,
+    "inference_ms_per_clip": 75.0
+  },
+  "test": {
+    "accuracy": 0.525,
+    "macro_f1": 0.50766241430911,
+    "n_clips": 240,
+    "inference_seconds_total": 16.29,
+    "inference_ms_per_clip": 67.9
+  }
+}

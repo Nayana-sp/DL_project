@@ -133,7 +133,29 @@ class AudioDataset(Dataset):
         n = min(s.shape[1], N_FRAMES)
         out[:, :n] = s[:, :n]
         return torch.from_numpy(out).unsqueeze(0), int(r["emotion_id"]) - 1, r["sample_id"]
-    
+
+class FusionDataset(Dataset):
+    """One item = one clip with both modalities: ((frames, log-Mel), label, sample_id).
+
+    frames: (5, 3, 112, 112); log-Mel: (1, N_MELS, N_FRAMES).
+    wave_fn is passed to the audio side (used later for the noise experiments).
+    """
+
+    def __init__(self, split=None, augment=False, index=None, wave_fn=None):
+        df = load_index(split) if index is None else index
+        df = df.reset_index(drop=True)
+        self.img = ImageDataset(index=df, augment=augment)
+        self.aud = AudioDataset(index=df, augment=augment, wave_fn=wave_fn)
+
+    def __len__(self):
+        return len(self.img)
+
+    def __getitem__(self, i):
+        xi, y, sid = self.img[i]
+        xa, _, _ = self.aud[i]
+        return (xi, xa), y, sid
+
+
 if __name__ == "__main__":
     for s in ("train", "val", "test"):
         print(s, len(load_index(s)), "clips")
