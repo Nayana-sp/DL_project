@@ -1,0 +1,29 @@
+{
+  "name": "image_cnn_v2",
+  "model": "image",
+  "params": 422824,
+  "epochs_run": 29,
+  "stopped_by": "early stopping",
+  "best_epoch": 17,
+  "best_val_macro_f1": 0.38343479363448874,
+  "train_seconds": 2303.6,
+  "seed": 42,
+  "torch": "2.15.0+cpu",
+  "args": {
+    "model": "image",
+    "name": "image_cnn_v2",
+    "epochs": 50,
+    "batch_size": 32,
+    "lr": 0.0005,
+    "weight_decay": 0.0001,
+    "patience": 12,
+    "emb_dim": 128,
+    "dropout": 0.3,
+    "seed": 42,
+    "workers": 0,
+    "threads": null,
+    "limit": null,
+    "resume": false,
+    "force": false
+  }
+}

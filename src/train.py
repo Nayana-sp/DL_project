@@ -23,8 +23,8 @@ from sklearn.metrics import accuracy_score, f1_score
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dataset import EMOTIONS, ImageDataset, class_weights, load_index
-from models import ClipImageModel, count_params
+from dataset import EMOTIONS, AudioDataset, ImageDataset, class_weights, load_index
+from models import AudioCNN, ClipImageModel, count_params
 
 ROOT = Path(__file__).resolve().parents[1]
 CKPT = ROOT / "checkpoints"
@@ -40,6 +40,8 @@ def seed_everything(seed):
 def build(kind, a):
     if kind == "image":
         return ClipImageModel(len(EMOTIONS), a.emb_dim, a.dropout), ImageDataset
+    if kind == "audio":
+        return AudioCNN(len(EMOTIONS), a.emb_dim, a.dropout), AudioDataset
     sys.exit(f"unknown model: {kind}")
 
 
@@ -68,6 +70,27 @@ def save_atomic(obj, path):
     torch.save(obj, tmp)
     os.replace(tmp, path)
 
+@torch.no_grad()
+def recalibrate_bn(model, loader, device="cpu"):
+    """Re-estimate BatchNorm running statistics from clean (un-augmented) clips; weights are not changed.
+
+    The running averages collected during training lag behind fast-changing weights and are built from
+    augmented batches, so they can be off at evaluation time (see bn_check.py).
+    """
+    bns = [m for m in model.modules() if isinstance(m, nn.BatchNorm2d)]
+    if not bns:
+        return
+    old = [m.momentum for m in bns]
+    for m in bns:
+        m.reset_running_stats()
+        m.momentum = None  # None = plain average over all batches
+    model.train()
+    for x, _, _ in loader:
+        model(x.to(device))
+    for m, mom in zip(bns, old):
+        m.momentum = mom
+    model.eval()
+
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
     model.train()
@@ -85,7 +108,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--model", choices=["image"], default="image")
+    ap.add_argument("--model", choices=["image", "audio"], default="image")
     ap.add_argument("--name", default="image_cnn")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=16)
@@ -98,6 +121,8 @@ def main():
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--threads", type=int, default=None)
     ap.add_argument("--limit", type=int, default=None, help="use only N train and N val clips (smoke test)")
+    ap.add_argument("--bn-recal", type=int, default=480,
+                    help="clips used to re-estimate BatchNorm statistics before each validation (0 = off)")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--force", action="store_true", help="overwrite existing checkpoints of this name")
     a = ap.parse_args()
@@ -121,7 +146,12 @@ def main():
     train_loader = DataLoader(DS(index=tr_idx, augment=True), batch_size=a.batch_size, shuffle=True,
                               num_workers=a.workers, generator=torch.Generator().manual_seed(a.seed))
     val_loader = DataLoader(DS(index=va_idx), batch_size=a.batch_size, shuffle=False, num_workers=a.workers)
-
+    recal_loader = None
+    if a.bn_recal > 0:
+        recal_idx = tr_idx.sample(min(a.bn_recal, len(tr_idx)), random_state=a.seed)
+        recal_loader = DataLoader(DS(index=recal_idx), batch_size=a.batch_size, shuffle=False,
+                                  num_workers=a.workers)
+        
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=a.epochs)
@@ -146,6 +176,9 @@ def main():
         t0 = time.time()
         tr_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
         _, yv, pv = predict_probs(model, val_loader, device)
+        if recal_loader is not None:
+            recalibrate_bn(model, recal_loader, device)  
+                
         val = score(yv, pv)
         scheduler.step()
         dt = time.time() - t0
