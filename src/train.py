@@ -182,10 +182,9 @@ def main():
             break
         t0 = time.time()
         tr_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
-        _, yv, pv = predict_probs(model, val_loader, device)
         if recal_loader is not None:
-            recalibrate_bn(model, recal_loader, device)  
-
+            recalibrate_bn(model, recal_loader, device)
+        _, yv, pv = predict_probs(model, val_loader, device)
         val = score(yv, pv)
         scheduler.step()
         dt = time.time() - t0
