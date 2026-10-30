@@ -1,0 +1,69 @@
+system,condition,severity,accuracy,macro_f1,follows_image,follows_audio,note
+image,clean,-,0.4,0.4066,,,
+audio,clean,-,0.5417,0.5216,,,
+early,clean,-,0.525,0.5077,,,
+late,clean,-,0.6208,0.5974,,,
+image,audio_noise,SNR 40 dB,0.4,0.4066,,,unaffected: no audio input
+audio,audio_noise,SNR 40 dB,0.4333,0.3832,,,
+early,audio_noise,SNR 40 dB,0.4667,0.3989,,,
+late,audio_noise,SNR 40 dB,0.575,0.5473,,,
+image,audio_noise,SNR 30 dB,0.4,0.4066,,,unaffected: no audio input
+audio,audio_noise,SNR 30 dB,0.1917,0.1195,,,
+early,audio_noise,SNR 30 dB,0.3292,0.2429,,,
+late,audio_noise,SNR 30 dB,0.25,0.2036,,,
+image,audio_noise,SNR 20 dB,0.4,0.4066,,,unaffected: no audio input
+audio,audio_noise,SNR 20 dB,0.1542,0.0976,,,
+early,audio_noise,SNR 20 dB,0.3042,0.2296,,,
+late,audio_noise,SNR 20 dB,0.175,0.1188,,,
+image,audio_noise,SNR 10 dB,0.4,0.4066,,,unaffected: no audio input
+audio,audio_noise,SNR 10 dB,0.1333,0.0463,,,
+early,audio_noise,SNR 10 dB,0.2625,0.1507,,,
+late,audio_noise,SNR 10 dB,0.1375,0.0462,,,
+image,audio_noise,SNR 0 dB,0.4,0.4066,,,unaffected: no audio input
+audio,audio_noise,SNR 0 dB,0.15,0.0613,,,
+early,audio_noise,SNR 0 dB,0.2542,0.1408,,,
+late,audio_noise,SNR 0 dB,0.1667,0.0693,,,
+image,image_dark,brightness x0.9,0.3875,0.3867,,,
+audio,image_dark,brightness x0.9,0.5417,0.5216,,,unaffected: no image input
+early,image_dark,brightness x0.9,0.4792,0.4642,,,
+late,image_dark,brightness x0.9,0.625,0.6015,,,
+image,image_dark,brightness x0.75,0.2542,0.2577,,,
+audio,image_dark,brightness x0.75,0.5417,0.5216,,,unaffected: no image input
+early,image_dark,brightness x0.75,0.3083,0.2522,,,
+late,image_dark,brightness x0.75,0.5583,0.5353,,,
+image,image_dark,brightness x0.5,0.175,0.1254,,,
+audio,image_dark,brightness x0.5,0.5417,0.5216,,,unaffected: no image input
+early,image_dark,brightness x0.5,0.35,0.287,,,
+late,image_dark,brightness x0.5,0.5333,0.508,,,
+image,image_dark,brightness x0.25,0.1333,0.0294,,,
+audio,image_dark,brightness x0.25,0.5417,0.5216,,,unaffected: no image input
+early,image_dark,brightness x0.25,0.1583,0.0646,,,
+late,image_dark,brightness x0.25,0.3917,0.3767,,,
+image,image_noise,sigma 0.02,0.4583,0.429,,,
+audio,image_noise,sigma 0.02,0.5417,0.5216,,,unaffected: no image input
+early,image_noise,sigma 0.02,0.4917,0.4684,,,
+late,image_noise,sigma 0.02,0.6417,0.6076,,,
+image,image_noise,sigma 0.05,0.2333,0.1245,,,
+audio,image_noise,sigma 0.05,0.5417,0.5216,,,unaffected: no image input
+early,image_noise,sigma 0.05,0.4333,0.4054,,,
+late,image_noise,sigma 0.05,0.525,0.5182,,,
+image,image_noise,sigma 0.1,0.1333,0.0294,,,
+audio,image_noise,sigma 0.1,0.5417,0.5216,,,unaffected: no image input
+early,image_noise,sigma 0.1,0.1792,0.0892,,,
+late,image_noise,sigma 0.1,0.3375,0.3254,,,
+image,image_noise,sigma 0.2,0.1375,0.0609,,,
+audio,image_noise,sigma 0.2,0.5417,0.5216,,,unaffected: no image input
+early,image_noise,sigma 0.2,0.1333,0.0294,,,
+late,image_noise,sigma 0.2,0.4417,0.4431,,,
+image,missing_audio,audio absent,0.4,0.4066,,,unaffected: no audio input
+audio,missing_audio,audio absent,,,,,no input left
+early,missing_audio,audio absent,0.2292,0.1113,,,NAIVE zero-fill: never trained for this
+late,missing_audio,audio absent,0.4,0.4066,,,fallback to image model (genuine handling)
+image,missing_image,face absent,,,,,no input left
+audio,missing_image,face absent,0.5417,0.5216,,,unaffected: no image input
+early,missing_image,face absent,0.35,0.2757,,,NAIVE zero-fill: never trained for this
+late,missing_image,face absent,0.5417,0.5216,,,fallback to audio model (genuine handling)
+image,conflict,voice from another emotion,,,0.4,0.0625,sees only the face
+audio,conflict,voice from another emotion,,,0.0458,0.5625,sees only the voice
+early,conflict,voice from another emotion,,,0.2167,0.2667,
+late,conflict,voice from another emotion,,,0.1417,0.4875,
