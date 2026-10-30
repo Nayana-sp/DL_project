@@ -1,0 +1,30 @@
+{
+  "name": "audio_cnn",
+  "model": "audio",
+  "params": 422248,
+  "epochs_run": 30,
+  "stopped_by": "reached max epochs",
+  "best_epoch": 30,
+  "best_val_macro_f1": 0.4861674045966877,
+  "train_seconds": 2218.3,
+  "seed": 42,
+  "torch": "2.15.0+cpu",
+  "args": {
+    "model": "audio",
+    "name": "audio_cnn",
+    "epochs": 30,
+    "batch_size": 16,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 30,
+    "emb_dim": 128,
+    "dropout": 0.3,
+    "seed": 42,
+    "workers": 0,
+    "threads": null,
+    "limit": null,
+    "bn_recal": 480,
+    "resume": false,
+    "force": false
+  }
+}

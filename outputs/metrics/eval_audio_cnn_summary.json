@@ -1,0 +1,20 @@
+{
+  "name": "audio_cnn",
+  "model": "audio",
+  "best_epoch": 30,
+  "selection_val_macro_f1": 0.4861674045966877,
+  "val": {
+    "accuracy": 0.49583333333333335,
+    "macro_f1": 0.48202599646466715,
+    "n_clips": 240,
+    "inference_seconds_total": 8.94,
+    "inference_ms_per_clip": 37.3
+  },
+  "test": {
+    "accuracy": 0.5416666666666666,
+    "macro_f1": 0.5216125602204773,
+    "n_clips": 240,
+    "inference_seconds_total": 7.03,
+    "inference_ms_per_clip": 29.3
+  }
+}
