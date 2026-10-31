@@ -1,6 +1,7 @@
 """Model definitions. Image CNN now; audio CNN and fusion models are added in later phases."""
 import torch
 import torch.nn as nn
+from torchvision.models import MobileNet_V2_Weights, mobilenet_v2
 
 
 def conv_block(cin, cout):
@@ -69,6 +70,57 @@ class EarlyFusionModel(nn.Module):
 
     def forward(self, x):
         return self.head(self.forward_embedding(x))
+
+class PretrainedCNN(nn.Module):
+    """ImageNet-pretrained MobileNetV2 trunk + the same embedding/classifier head as ImageCNN."""
+
+    def __init__(self, n_classes=8, emb_dim=128, dropout=0.3):
+        super().__init__()
+        self.features = mobilenet_v2(weights=MobileNet_V2_Weights.IMAGENET1K_V1).features
+        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.embed = nn.Sequential(nn.Flatten(), nn.Dropout(dropout),
+                                   nn.Linear(1280, emb_dim), nn.ReLU(inplace=True))
+        self.classifier = nn.Sequential(nn.Dropout(dropout), nn.Linear(emb_dim, n_classes))
+        self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
+
+    def prep(self, x):
+        raise NotImplementedError
+
+    def forward_embedding(self, x):
+        return self.embed(self.pool(self.features(self.prep(x))))
+
+    def forward(self, x):
+        return self.classifier(self.forward_embedding(x))
+
+    def param_groups(self, lr, backbone_mult=0.1):
+        """Pretrained trunk learns 10x slower than the new head."""
+        head = list(self.embed.parameters()) + list(self.classifier.parameters())
+        return [{"params": list(self.features.parameters()), "lr": lr * backbone_mult},
+                {"params": head, "lr": lr}]
+
+
+class PretrainedFaceCNN(PretrainedCNN):
+    def prep(self, x):  # dataset gives [-1, 1]; ImageNet weights expect mean/std normalisation
+        return ((x + 1) / 2 - self.mean) / self.std
+
+
+class PretrainedAudioCNN(PretrainedCNN):
+    """log-Mel (B,1,64,501) -> repeated to 3 channels -> pretrained trunk."""
+
+    def prep(self, x):
+        return x.repeat(1, 3, 1, 1)
+
+
+class ClipImageModelPre(ClipImageModel):
+    """Same clip wrapper (mean over the 5 frames) with the pretrained face CNN inside."""
+
+    def __init__(self, n_classes=8, emb_dim=128, dropout=0.3):
+        super().__init__(n_classes, emb_dim, dropout)
+        self.cnn = PretrainedFaceCNN(n_classes, emb_dim, dropout)
+
+    def param_groups(self, lr):
+        return self.cnn.param_groups(lr)
 
 def count_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)

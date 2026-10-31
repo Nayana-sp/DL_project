@@ -1,0 +1,20 @@
+{
+  "name": "audio_pre_v1",
+  "model": "audio_pre",
+  "best_epoch": 15,
+  "selection_val_macro_f1": 0.5501785461405473,
+  "val": {
+    "accuracy": 0.5583333333333333,
+    "macro_f1": 0.5501785461405473,
+    "n_clips": 240,
+    "inference_seconds_total": 14.82,
+    "inference_ms_per_clip": 61.8
+  },
+  "test": {
+    "accuracy": 0.6208333333333333,
+    "macro_f1": 0.6108737996612315,
+    "n_clips": 240,
+    "inference_seconds_total": 10.65,
+    "inference_ms_per_clip": 44.4
+  }
+}

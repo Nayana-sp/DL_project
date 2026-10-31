@@ -24,8 +24,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from dataset import EMOTIONS, AudioDataset, FusionDataset, ImageDataset, class_weights, load_index
-from models import AudioCNN, ClipImageModel, EarlyFusionModel, count_params
-
+from models import (AudioCNN, ClipImageModel, ClipImageModelPre, EarlyFusionModel,
+                    PretrainedAudioCNN, count_params)
 ROOT = Path(__file__).resolve().parents[1]
 CKPT = ROOT / "checkpoints"
 METRICS = ROOT / "outputs" / "metrics"
@@ -49,6 +49,10 @@ def build(kind, a):
         return AudioCNN(len(EMOTIONS), a.emb_dim, a.dropout), AudioDataset
     if kind == "early":
         return EarlyFusionModel(len(EMOTIONS), a.emb_dim, a.dropout), FusionDataset
+    if kind == "image_pre":
+        return ClipImageModelPre(len(EMOTIONS), a.emb_dim, a.dropout), ImageDataset
+    if kind == "audio_pre":
+        return PretrainedAudioCNN(len(EMOTIONS), a.emb_dim, a.dropout), AudioDataset
     sys.exit(f"unknown model: {kind}")
 
 
@@ -115,7 +119,7 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--model", choices=["image", "audio", "early"], default="image")
+    ap.add_argument("--model", choices=["image", "audio", "early", "image_pre", "audio_pre"], default="image")
     ap.add_argument("--name", default="image_cnn")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch-size", type=int, default=16)
@@ -160,7 +164,8 @@ def main():
                                   num_workers=a.workers)
         
     criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.weight_decay)
+    params = model.param_groups(a.lr) if hasattr(model, "param_groups") else model.parameters()
+    optimizer = torch.optim.AdamW(params, lr=a.lr, weight_decay=a.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=a.epochs)
     state = dict(epoch=0, best_f1=-1.0, best_epoch=0, no_improve=0, history=[], train_seconds=0.0)
 

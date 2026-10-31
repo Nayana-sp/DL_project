@@ -1,0 +1,30 @@
+{
+  "name": "audio_pre_v1",
+  "model": "audio_pre",
+  "params": 2388872,
+  "epochs_run": 20,
+  "stopped_by": "reached max epochs",
+  "best_epoch": 15,
+  "best_val_macro_f1": 0.5501785461405473,
+  "train_seconds": 1914.3,
+  "seed": 42,
+  "torch": "2.15.0+cpu",
+  "args": {
+    "model": "audio_pre",
+    "name": "audio_pre_v1",
+    "epochs": 20,
+    "batch_size": 16,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "patience": 8,
+    "emb_dim": 128,
+    "dropout": 0.3,
+    "seed": 42,
+    "workers": 0,
+    "threads": null,
+    "limit": null,
+    "bn_recal": 480,
+    "resume": false,
+    "force": false
+  }
+}
