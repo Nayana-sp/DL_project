@@ -1,0 +1,13 @@
+system,run,val acc,val macro-F1,test acc,test macro-F1
+"Image only, from scratch",image_cnn_v3,0.4542,0.4485,0.4,0.4066
+"Audio only, from scratch",audio_cnn,0.4958,0.482,0.5417,0.5216
+"Early fusion, from scratch",early_cnn,0.4833,0.4758,0.525,0.5077
+"Late fusion, from scratch",late_fusion,0.6042,0.5942,0.6208,0.5974
+"Image only, pretrained seed 1",image_pre_v1,0.5542,0.5449,0.475,0.4759
+"Image only, pretrained seed 2",image_pre_s2,0.5625,0.5409,0.5417,0.5214
+"Audio only, pretrained seed 1",audio_pre_v1,0.5583,0.5502,0.6208,0.6109
+"Audio only, pretrained seed 2",audio_pre_s2,0.5333,0.5196,0.6167,0.6139
+"Image only, pretrained 2-seed average",image_pre_ens,0.5583,0.5398,0.525,0.5054
+"Audio only, pretrained 2-seed average",audio_pre_ens,0.5792,0.5659,0.6625,0.6536
+"Late fusion, pretrained seed 1",late_fusion_pre_b,0.65,0.6304,0.6458,0.645
+"Late fusion, pretrained 2-seed average (final)",late_fusion_ens,0.6792,0.6568,0.6917,0.6871

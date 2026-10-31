@@ -1,0 +1,9 @@
+comparison,accuracy diff,95% CI low,95% CI high,excludes 0
+"Late fusion, pretrained 2-seed average (final) - Late fusion, from scratch",0.0708,0.0,0.1417,no
+"Late fusion, pretrained 2-seed average (final) - Late fusion, pretrained seed 1",0.0458,0.0083,0.0875,yes
+"Late fusion, pretrained 2-seed average (final) - Audio only, pretrained 2-seed average",0.0292,-0.0292,0.0875,no
+"Late fusion, pretrained 2-seed average (final) - Early fusion, from scratch",0.1667,0.0917,0.2375,yes
+"Audio only, pretrained 2-seed average - Audio only, from scratch",0.1208,0.0625,0.1875,yes
+"Image only, pretrained 2-seed average - Image only, from scratch",0.125,0.0417,0.2042,yes
+"Audio only, pretrained 2-seed average - Audio only, pretrained seed 2",0.0458,0.0083,0.0833,yes
+"Image only, pretrained 2-seed average - Image only, pretrained seed 2",-0.0167,-0.0583,0.025,no
