@@ -1,6 +1,7 @@
 """Phase 10 (second half): robustness tests. No model is trained or tuned here.
 
 Systems: image-only, audio-only, early fusion, late fusion (probability blend with the saved audio weight).
+Image-only and audio-only can be an average of several runs: give several names after --image / --audio.
 Conditions: clean | audio noise at fixed SNRs | darker or noisy faces | missing audio | missing face |
 conflict (face of one clip + voice of a clip with a different emotion).
 
@@ -10,8 +11,8 @@ Missing input:
   single-modality systems -> no input, shown as n/a
 
 Usage (project folder, .venv active):
-    python src/robustness.py --split val      # check that everything runs
-    python src/robustness.py --split test     # numbers to report
+    python src/robustness.py --split test
+    python src/robustness.py --image image_pre_v1 image_pre_s2 --audio audio_pre_v1 audio_pre_s2 --late late_fusion_ens --image-ref image_pre_ens --audio-ref audio_pre_ens --tag _final
 """
 import argparse
 import json
@@ -48,6 +49,22 @@ def load_model(name):
 
 def loader(ds, bs):
     return DataLoader(ds, batch_size=bs, shuffle=False, num_workers=0)
+
+
+def probs_mean(models, make_loader):
+    """Average of the class probabilities of several models (one model = that model's probabilities)."""
+    ids, y, ps = None, None, []
+    for m in models:
+        ids, y, p = predict_probs(m, make_loader())
+        ps.append(p)
+    return ids, y, np.mean(ps, axis=0)
+
+
+def saved_acc(name, split):
+    try:
+        return json.loads((METRICS / f"eval_{name}_summary.json").read_text())[split]["accuracy"]
+    except Exception:
+        return None
 
 
 # ---------- corruptions ----------
@@ -139,32 +156,37 @@ def cell(r):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    ap.add_argument("--image", default="image_cnn_v3")
-    ap.add_argument("--audio", default="audio_cnn")
+    ap.add_argument("--image", nargs="+", default=["image_cnn_v3"])
+    ap.add_argument("--audio", nargs="+", default=["audio_cnn"])
     ap.add_argument("--early", default="early_cnn")
     ap.add_argument("--late", default="late_fusion")
+    ap.add_argument("--image-ref", default=None, help="saved eval name to check the clean image result against")
+    ap.add_argument("--audio-ref", default=None, help="saved eval name to check the clean audio result against")
     ap.add_argument("--split", default="test", choices=["val", "test"])
     ap.add_argument("--snr", type=float, nargs="+", default=[20, 10, 0])
     ap.add_argument("--dark", type=float, nargs="+", default=[0.5, 0.25])
     ap.add_argument("--img-noise", type=float, nargs="+", default=[0.1, 0.2])
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--tag", default="", help="suffix for the output file name, e.g. _fine")
+    ap.add_argument("--tag", default="", help="suffix for the output file name, e.g. _final")
     ap.add_argument("--batch-size", type=int, default=32)
     a = ap.parse_args()
     t0 = time.time()
     bs = a.batch_size
 
     df = load_index(a.split)
-    img_m, aud_m, early_m = load_model(a.image), load_model(a.audio), load_model(a.early)
+    img_ms = [load_model(n) for n in a.image]
+    aud_ms = [load_model(n) for n in a.audio]
+    early_m = load_model(a.early)
     w = float(json.loads((METRICS / f"eval_{a.late}_summary.json").read_text())["audio_weight"])
-    print(f"split={a.split} | {len(df)} clips | late-fusion audio weight {w:.2f}")
+    print(f"split={a.split} | {len(df)} clips | image runs {a.image} | audio runs {a.audio} | "
+          f"early {a.early} | late-fusion audio weight {w:.2f}")
 
     def blend(pi, pa):
         return w * pa + (1 - w) * pi
 
     # ---- clean passes ----
-    ids0, y, pi0 = predict_probs(img_m, loader(ImageDataset(index=df), bs))
-    ids1, _, pa0 = predict_probs(aud_m, loader(AudioDataset(index=df), bs))
+    ids0, y, pi0 = probs_mean(img_ms, lambda: loader(ImageDataset(index=df), bs))
+    ids1, _, pa0 = probs_mean(aud_ms, lambda: loader(AudioDataset(index=df), bs))
     ids2, _, pe = early_probs(early_m, loader(FusionDataset(index=df), bs), drops=(None, "audio", "image"))
     assert ids0 == ids1 == ids2, "clip order differs between passes"
 
@@ -179,13 +201,19 @@ def main():
         rows.append(make_row(system, cond, sev, note))
 
     clean = {"image": pi0, "audio": pa0, "early": pe[None], "late": blend(pi0, pa0)}
-    names = {"image": a.image, "audio": a.audio, "early": a.early, "late": a.late}
+    refs = {"image": a.image_ref or (a.image[0] if len(a.image) == 1 else None),
+            "audio": a.audio_ref or (a.audio[0] if len(a.audio) == 1 else None),
+            "early": a.early, "late": a.late}
     print("Clean check against the saved evaluation (must say OK):")
     for s, p in clean.items():
         add(s, "clean", "-", p)
-        saved = json.loads((METRICS / f"eval_{names[s]}_summary.json").read_text())[a.split]["accuracy"]
-        ok = abs(saved - rows[-1]["accuracy"]) < 1e-4
-        print(f"  {s:5s} accuracy {rows[-1]['accuracy']:.4f} vs saved {saved:.4f} -> {'OK' if ok else 'MISMATCH'}")
+        acc = rows[-1]["accuracy"]
+        saved = saved_acc(refs[s], a.split) if refs[s] else None
+        if saved is None:
+            print(f"  {s:5s} accuracy {acc:.4f} (no saved reference to compare)")
+        else:
+            ok = abs(saved - acc) < 1e-4
+            print(f"  {s:5s} accuracy {acc:.4f} vs saved {saved:.4f} -> {'OK' if ok else 'MISMATCH'}")
 
     # ---- audio noise ----
     x0 = load_wave(ROOT / df.iloc[0]["audio_path"])
@@ -196,7 +224,7 @@ def main():
         meas = 10 * np.log10(np.mean(x0[:n0].astype(np.float64) ** 2)
                              / np.mean((y0[:n0] - x0[:n0]).astype(np.float64) ** 2))
         print(f"SNR check on first clip: target {snr:g} dB, measured {meas:.1f} dB")
-        _, _, pa = predict_probs(aud_m, loader(AudioDataset(index=df, wave_fn=fn), bs))
+        _, _, pa = probs_mean(aud_ms, lambda: loader(AudioDataset(index=df, wave_fn=fn), bs))
         _, _, pe_n = early_probs(early_m, loader(FusionDataset(index=df, wave_fn=fn), bs))
         sev = f"SNR {snr:g} dB"
         add("image", "audio_noise", sev, pi0, "unaffected: no audio input")
@@ -208,7 +236,7 @@ def main():
     conds = [("image_dark", f"brightness x{f:g}", dark_fn(f)) for f in a.dark]
     conds += [("image_noise", f"sigma {s:g}", img_noise_fn(s, a.seed)) for s in a.img_noise]
     for cond, sev, fn in conds:
-        _, _, pi = predict_probs(img_m, loader(ImgCorrupt(ImageDataset(index=df), fn, False), bs))
+        _, _, pi = probs_mean(img_ms, lambda: loader(ImgCorrupt(ImageDataset(index=df), fn, False), bs))
         _, _, pe_c = early_probs(early_m, loader(ImgCorrupt(FusionDataset(index=df), fn, True), bs))
         add("image", cond, sev, pi)
         add("audio", cond, sev, pa0, "unaffected: no image input")
