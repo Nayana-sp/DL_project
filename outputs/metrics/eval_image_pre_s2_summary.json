@@ -1,0 +1,20 @@
+{
+  "name": "image_pre_s2",
+  "model": "image_pre",
+  "best_epoch": 8,
+  "selection_val_macro_f1": 0.5408769326810468,
+  "val": {
+    "accuracy": 0.5625,
+    "macro_f1": 0.5408769326810468,
+    "n_clips": 240,
+    "inference_seconds_total": 8.6,
+    "inference_ms_per_clip": 35.8
+  },
+  "test": {
+    "accuracy": 0.5416666666666666,
+    "macro_f1": 0.5214448560465093,
+    "n_clips": 240,
+    "inference_seconds_total": 6.6,
+    "inference_ms_per_clip": 27.5
+  }
+}

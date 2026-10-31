@@ -14,3 +14,4 @@ outputs/logs/*.log
 *.tmp
 outputs/figures/crop_check.png
 outputs/figures/probe_*.jpg
+space_upload/

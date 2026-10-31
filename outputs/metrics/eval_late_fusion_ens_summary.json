@@ -1,0 +1,21 @@
+{
+  "name": "late_fusion_ens",
+  "image_model": "image_pre_ens",
+  "audio_model": "audio_pre_ens",
+  "audio_weight": 0.5,
+  "val_sweep_best_macro_f1": 0.6567598201385122,
+  "val": {
+    "accuracy": 0.6791666666666667,
+    "macro_f1": 0.6567598201385122,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  },
+  "test": {
+    "accuracy": 0.6916666666666667,
+    "macro_f1": 0.6871006045136064,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  }
+}

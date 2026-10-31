@@ -1,0 +1,22 @@
+{
+  "name": "audio_pre_ens",
+  "runs": [
+    "audio_pre_v1",
+    "audio_pre_s2"
+  ],
+  "method": "mean of class probabilities",
+  "val": {
+    "accuracy": 0.5791666666666667,
+    "macro_f1": 0.5659275872552264,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  },
+  "test": {
+    "accuracy": 0.6625,
+    "macro_f1": 0.6535858503953407,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  }
+}

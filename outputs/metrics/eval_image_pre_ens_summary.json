@@ -1,0 +1,22 @@
+{
+  "name": "image_pre_ens",
+  "runs": [
+    "image_pre_v1",
+    "image_pre_s2"
+  ],
+  "method": "mean of class probabilities",
+  "val": {
+    "accuracy": 0.5583333333333333,
+    "macro_f1": 0.5397850234884396,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  },
+  "test": {
+    "accuracy": 0.525,
+    "macro_f1": 0.5053957885087508,
+    "n_clips": 240,
+    "inference_seconds_total": NaN,
+    "inference_ms_per_clip": NaN
+  }
+}
